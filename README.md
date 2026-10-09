@@ -67,8 +67,17 @@ versus reference, annotation coverage, bounds checks, and an alignment test
 between ground-truth points and bright spots in the images.
 
 Add `--per-frame-means previews/ascent/per_frame_means.csv` to stream through
-all 1100 frames once (one at a time) and record per-frame intensities, which
-reveals the chemical-stimulus timing.
+all 1100 frames once (one at a time, about 2 minutes) and record per-frame
+intensities plus the brightness of every ground-truth track in both channels
+(`per_frame_means_tracks.csv`). Two small scripts plot those outputs:
+
+```bash
+python -P scripts/plot_per_frame_means.py previews/ascent/per_frame_means.csv previews/ascent/per_frame_means.png
+python -P scripts/plot_neuron_traces.py previews/ascent/per_frame_means_tracks.csv previews/ascent/neuron_traces.png
+```
+
+The second prints per-neuron statistics that show which channel carries
+calcium activity and plots the most responsive neurons.
 
 ### 3. Previews
 
@@ -91,5 +100,7 @@ scripts/download_ascent.sh checksum-verified download from Zenodo
 scripts/parallel_fetch.sh  parallel range downloader used for large files
 scripts/inspect_ascent.py  frame-by-frame inspection of the HDF5 + CSVs
 scripts/make_previews.py   PNG / MP4 previews
+scripts/plot_per_frame_means.py   population brightness over time
+scripts/plot_neuron_traces.py     per-neuron channel comparison
 requirements.txt
 ```
