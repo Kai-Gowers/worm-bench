@@ -11,6 +11,9 @@ Every statement below is tagged:
 
 - **Verified**: measured directly from the downloaded files by `scripts/inspect_ascent.py`.
 - **Documented**: stated in the Zenodo record description or the ASCENT GitHub README, not checkable from the files.
+- **Inferred**: a conclusion drawn from measurements plus an assumption
+  (e.g. that the documented frame rate is right); stated separately from the
+  measurement it rests on.
 - **Estimate**: our interpretation of the evidence.
 - **Unknown**: not stated anywhere we could find.
 
@@ -101,8 +104,10 @@ Channel names are **not** stored in the file.
   brightness by the end (see `previews/ascent/per_frame_means.png`).
 - After removing that slow trend, the **population-average** brightness of the
   two channels is nearly identical and shares the same sharp dips at the same
-  moments. Shared dips in both colours are the signature of brief **motion**
-  (a neuron shifting away from its annotated position), not calcium activity.
+  moments. Dips that appear in both colours at once cannot be calcium
+  activity, which would affect only `c1`; a plausible explanation is brief
+  motion shifting a neuron relative to its annotated position, but this was
+  not checked against the track displacements (Estimate).
 - Where the channels differ is at the level of **individual neurons**:
   across all 96 tracks, after removing each neuron's own bleaching trend,
   the fluctuation (coefficient of variation) in `c1` is larger than in `c0`
@@ -113,25 +118,32 @@ Channel names are **not** stored in the file.
   (90th percentiles). The traces of the most channel-asymmetric neurons show
   slow, multi-second brightening events in `c1` with a flat `c0`, which is what
   calcium transients look like; the median per-neuron correlation between the
-  two channels' detrended traces is 0.65, reflecting shared motion and noise.
+  two channels' detrended traces is 0.65, so a large shared component (motion,
+  focus drift, or noise; cause not determined) remains in both channels.
 
-- The responding neurons rise sharply at the **same three moments**: frames
-  ≈200, ≈499 and ≈797 (medians over the six most responsive tracks). The
-  spacing of ≈298 frames matches the documented 90 s stimulus cycle (60 s
-  buffer + 30 s food odour), which is exactly what stimulus-evoked calcium
-  responses should look like. The reference channel shows nothing at those
-  moments.
+- **Measured:** the six most channel-asymmetric neurons rise sharply at
+  frames ≈200, ≈499 and ≈797 (medians of the three largest positive jumps per
+  trace). The spacing is ≈298 frames. The reference channel shows no
+  corresponding change at those frames.
+- **Inferred:** at the documented 3.3 Hz, 298 frames is 90 s, the length of
+  the documented 60 s buffer + 30 s stimulus cycle. The simplest reading is
+  that these are stimulus-evoked responses with stimulus onsets near those
+  frames. No stimulus or valve timing is recorded in the files, so this is an
+  inference from the responses, not a verified fact.
 
-**Conclusion (Verified):** `c1` carries calcium activity and `c0` is the
-stable reference, as documented. The population-level difference is subtle
-because the worm is immobilized and only roughly a quarter of the tracked
-neurons respond strongly to the stimulus; `previews/ascent/neuron_traces.png`
-shows the clearest examples.
+**Conclusion.** Measured: `c1` is the more temporally variable channel per
+neuron, and the asymmetry is one-sided (no neuron is twice as variable in
+`c0`). Inferred: `c1` carries calcium activity and `c0` is the stable
+reference, consistent with the documentation. The population-level difference
+is small; roughly a quarter of tracked neurons show large `c1`-only
+fluctuations, and `previews/ascent/neuron_traces.png` shows the clearest
+examples.
 
-**Caveat (Estimate):** the GCaMP channel also shows a dense, granular bright
-region in the upper-right of the field that is absent from the mNeptune
-channel and has no annotations (see `mip_t0.png`). This is most likely gut
-autofluorescence, which is common in the green channel, rather than neurons.
+**Unannotated bright region (observation, cause not determined):** the `c1`
+channel shows a dense, granular bright region in the upper-right of the field
+that is absent from `c0` and has no annotations (see `mip_t0.png`). Possible
+explanations include gut autofluorescence, which commonly appears in the green
+channel, or non-neuronal tissue; no test was done to distinguish them.
 
 ## 5. Voxel size and timing
 
@@ -141,10 +153,10 @@ autofluorescence, which is common in the green channel, rather than neurons.
 | z step | 1.5 µm | **Documented**; not in file |
 | Field of view | 512 × 0.243 = 124 µm square | Estimate from documented values |
 | Depth span | 8 steps × 1.5 µm = 12 µm between first and last slice | Estimate from documented values |
-| Volume rate | 3.3 Hz (one 2-channel, 9-slice volume every ~0.30 s) | **Documented**; not in file. **Cross-checked**: stimulus responses recur every ≈298 frames, and 298 frames / 90 s = 3.3 Hz |
+| Volume rate | 3.3 Hz (one 2-channel, 9-slice volume every ~0.30 s) | **Documented**; not in file. Consistency check (Inferred): the measured ≈298-frame spacing of calcium responses equals 90 s at 3.3 Hz, matching the documented cycle length, if the responses are stimulus-locked |
 | Duration | 1100 / 3.3 ≈ 333 s ≈ 5.6 min | Estimate from documented values |
 | Per-frame timestamps | none | **Verified absent** |
-| Stimulus schedule | 60 s buffer then 30 s *E. coli* OP50 supernatant, repeated | **Documented**; phase **Verified** from calcium responses: onsets at frames ≈200, 499, 797 (≈60, 151, 241 s), i.e. the cycle starts at frame 0 |
+| Stimulus schedule | 60 s buffer then 30 s *E. coli* OP50 supernatant, repeated | **Documented**. Phase relative to frame 0 is **Inferred**, not verified: calcium responses begin at frames ≈200, 499, 797 (≈60, 151, 241 s at 3.3 Hz), which would fit a cycle starting at frame 0 |
 | Objective / camera | 40× 0.75 NA air, Photometrics Evolve 512 Delta EM-CCD, Bruker Opterra II swept-field confocal | **Documented** |
 | Strain | ZM9624 (pan-neuronal GCaMP6 + mNeptune) | **Documented** |
 
@@ -173,9 +185,12 @@ tracks file matches an `object_id` in the coords file with identical
 rows), which suggests they are leftover IDs from a larger automatic detection
 set (ZephIR output, per the documentation) that was pruned during manual
 proofreading. Coverage is therefore **complete in time** (every frame
-annotated) but **partial in space**: 96 tracked neurons, while the images show
-visibly more cells (the head contains roughly 180–190 neurons). How the 96
-were chosen is **Unknown**.
+annotated). Spatial completeness is **unresolved**: 96 neurons are tracked,
+and a casual look at the previews shows bright cells without circles, but no
+systematic visual audit was done and the documentation does not say whether
+the 96 are all identifiable neurons, a chosen subset, or all cells that could
+be followed reliably. A worm's head contains roughly 180–190 neurons, but
+how many lie within this 9-slice stack is not known.
 
 **Provenance (Documented):** tracks were produced by ZephIR and then manually
 proofread and corrected. They are "corrected algorithmic" rather than purely
@@ -184,26 +199,34 @@ manual annotations.
 **Motion (Verified from the tracks):** the median in-plane displacement of a
 neuron between consecutive frames is 1 voxel (≈0.24 µm); 49 % of steps are
 exactly zero; the 99th percentile is 7.6 voxels and the maximum 40 voxels
-(≈10 µm); depth never changes by more than 2 slices in one step. This is a
-nearly stationary worm with occasional twitches, i.e. an easy tracking case
-compared with freely moving animals.
+(≈10 µm); depth never changes by more than 2 slices in one step. These are
+displacements of the annotated points; they indicate a nearly stationary
+preparation with occasional larger jumps whose cause (worm twitch, stage or
+focus drift, or annotation correction) was not determined.
 
-**Depth distribution (Verified, interpretation Estimate):** annotations pile
-up on the top and bottom slices:
+**Depth distribution (counts Verified, interpretation an open hypothesis):**
+annotations pile up on the top and bottom slices:
 
 | z | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 |---|---|---|---|---|---|---|---|---|---|
 | rows (thousands) | 25.0 | 7.8 | 7.9 | 7.7 | 3.0 | 10.2 | 11.6 | 10.5 | 22.0 |
 
-Almost half of all points sit on z = 0 or z = 8. The likely explanation is that
-the 9-slice stack does not cover the full thickness of the head, so neurons
-whose true centre lies above or below the stack were annotated on the nearest
-edge slice. For benchmarking, z coordinates on the edge slices should be
-treated as clipped, not exact.
+Almost half of all points sit on z = 0 or z = 8. One hypothesis is that the
+9-slice stack does not cover the full thickness of the head, so neurons whose
+true centre lies above or below the stack were annotated on the nearest edge
+slice (clipped z). Alternatives, such as the stack genuinely ending at dense
+layers of cells, or the annotation tool snapping to edge slices, have not been
+ruled out. This stays an open question (section 10); no scoring rule should be
+derived from it yet.
 
 ## 7. Are the annotations in bounds and aligned with the images?
 
-**Verified** (`inspect_ascent.py` sections 5 and 6):
+Two different questions are tested here. **Spatial alignment** asks whether
+each annotated (z, y, x) lands on a neuron in the frame it belongs to.
+**Track-identity correctness** asks whether a given `TrackID` follows the
+same neuron from frame to frame. Only the first was tested quantitatively.
+
+**Spatial alignment (Verified**, `inspect_ascent.py` sections 5 and 6):
 
 - Every point satisfies 0 ≤ z ≤ 8, 0 ≤ y, x ≤ 511. Actual ranges: z 0–8,
   y 103–366, x 9–508. Zero out-of-range rows.
@@ -216,11 +239,18 @@ treated as clipped, not exact.
 - 70–94 % of GT points lie within 3 pixels of the brightest pixel of their
   11×11 neighbourhood in the same slice.
 - Visually (`previews/ascent/*_gt.png`, `mip_movie_c0c1_gt.mp4`), red circles
-  sit on neuron bodies throughout.
+  sit on neuron bodies in the frames inspected.
 
-Conclusion: coordinates are voxel indices in the same `(z, y, x)` order as the
-HDF5 datasets, with no offset or scaling, and track IDs follow the same cells
-over time.
+Conclusion for spatial alignment: coordinates are voxel indices in the same
+`(z, y, x)` order as the HDF5 datasets, with no offset or scaling.
+
+**Track-identity correctness (not verified):** no test was run to check that
+a `TrackID` stays on the same cell across frames. Indirect evidence is
+consistent with it: per-step displacements are small (section 6), and the
+per-track brightness traces are smooth (`neuron_traces.png`), which would be
+unlikely if IDs swapped frequently between neighbouring cells. A systematic
+check (e.g. watching the overlay movie track by track, or testing for ID
+swaps at the large-displacement steps) remains to be done.
 
 ## 8. Previews
 
@@ -231,15 +261,17 @@ All under `previews/ascent/` (git-ignored, on scratch). Generated by
 |---|---|
 | `depth_slices_t{0,550}_c{0,1}.png` (+ `_gt`) | 3×3 grid of the 9 z-slices of one frame, one channel, with/without GT circles (~0.8–0.9 MB each) |
 | `mip_t{0,550}.png` (+ `_gt`) | max projection over z, `c0` and `c1` side by side (~0.6 MB) |
-| `mip_movie_c0c1.mp4` | frames 150–299 (≈45 s of recording) as max projections, `c0` left, `c1` right, 10 fps (27 MB) |
-| `mip_movie_c0c1_gt.mp4` | same with GT circles and track IDs (28 MB) |
+| `mip_movie_c0c1.mp4` | frames 150–299 (≈45 s of recording at the documented 3.3 Hz) as max projections, `c0` left, `c1` right, played at 10 fps, i.e. **≈3× faster than real time** (15 s playback) (27 MB) |
+| `mip_movie_c0c1_gt.mp4` | same with GT circles and track IDs, same ≈3× speed-up (28 MB) |
 | `per_frame_means.csv/.png` | per-frame mean brightness, whole volume and at GT positions, both channels |
 | `per_frame_means_tracks.csv` | brightness of every track in every frame and channel (long format) |
 | `neuron_traces.png` | detrended traces of the neurons that differ most between channels |
 | `inspection_summary.json` | machine-readable output of the inspection script |
 
 Display intensities are stretched between the 1st and 99.9th percentile of the
-first frame and kept fixed, so brightness changes over time are real.
+first frame and kept fixed, so brightness changes over time reflect the data
+rather than per-frame rescaling. The time labels burned into the movie assume
+the documented 3.3 Hz.
 
 ## 9. Inventory entry (draft)
 
@@ -251,40 +283,49 @@ first frame and kept fixed, so brightness changes over time are real.
 | Dimensions | T=1100, C=2, Z=9, Y=512, X=512 (Verified) |
 | Voxel size | 0.243 × 0.243 × 1.5 µm (Documented) |
 | Rate / duration | 3.3 Hz / ≈333 s (Documented / Estimate) |
-| Channels | c0 mNeptune reference, c1 GCaMP6 calcium (Documented, consistent with data) |
+| Channels | c0 mNeptune reference, c1 GCaMP6 calcium (Documented; per-neuron variability is consistent with this) |
 | Condition | immobilized in microfluidic device, chemical stimulus pulses (Documented) |
-| Movement | very low; median step 1 voxel, occasional twitches up to 40 voxels (Verified) |
+| Movement | annotated points move a median of 1 voxel per step, with occasional jumps up to 40 voxels (Verified); cause of the jumps not determined |
 | Preprocessing | Unknown; file described as "raw" (Documented) |
-| Annotations | 96 tracked neurons × 1100 frames = 105,599 points, integer voxel coords (Verified) |
+| Annotations | 96 tracked neurons × 1100 frames = 105,599 points, integer voxel coords (Verified); completeness relative to visible cells unresolved |
 | Annotation provenance | ZephIR tracks, manually proofread (Documented) |
 | Biological identities | none |
 | License | CC-BY-4.0 (Documented) |
-| Verification status | files downloaded, checksums match, structure and alignment verified |
+| Verification status | files downloaded, checksums match, structure and spatial alignment verified; track-identity correctness and annotation completeness not yet audited |
 
 ## 10. Open questions and uncertainties
 
-1. **Exact timing.** 3.3 Hz is documented and consistent with the measured
-   stimulus period, but no timestamps exist in the file; whether the interval
-   is perfectly constant, and whether the two channels and nine slices are
+1. **Exact timing.** 3.3 Hz is documented; no timestamps exist in the file.
+   The ≈298-frame spacing of calcium responses is consistent with 3.3 Hz if
+   the responses are stimulus-locked, but that is circular as a check of the
+   rate. Whether the interval is constant, and whether channels and slices are
    acquired simultaneously or sequentially, is Unknown.
-2. **Stimulus phase** is now Verified from the responses (onsets at frames
-   ≈200, 499, 797), but the valve timing itself is not recorded in the files,
-   so the onset frames carry an uncertainty of a few frames (response latency
-   and flow delay).
-3. **Depth coverage.** The pile-up of annotations on the edge slices suggests
-   the stack does not contain the whole ganglion. Whether edge-slice z values
-   are clipped or exact is Unknown.
-4. **Neuron selection.** Why 96 neurons (and not all visible cells) were
-   tracked is Unknown; the GT should be treated as a reliable subset, not an
-   exhaustive segmentation.
+2. **Stimulus phase** is Inferred from the responses (onsets at frames ≈200,
+   499, 797), not verified: valve timing is not recorded, response latency
+   and flow delay are unknown, and the responses could in principle have
+   another periodic cause.
+3. **Depth coverage.** Almost half the annotations sit on the edge slices.
+   Clipped z coordinates is one hypothesis; it has not been tested, and no
+   evaluation rule should depend on it until it is.
+4. **Annotation completeness.** Whether the 96 tracks cover all neurons that
+   are identifiable in this stack, or a subset, is unresolved. Settling it
+   needs either documentation from the authors or a systematic visual audit
+   of unannotated bright cells.
+4b. **Track-identity correctness** has not been tested directly (section 7).
 5. **Track 88** is missing one frame; whether that is a proofreading decision
    or an omission is Unknown.
 6. **Raw vs processed.** The record calls the file "raw volumetric imaging
    data", but we could not confirm the absence of registration, cropping or
    background subtraction. The baseline of ~320 counts looks like an
    unprocessed camera offset.
-7. **Hot pixels.** A few pixels reach ~24,000 counts in `c0` while neuron peaks
-   are ~8,000; likely camera hot pixels, not checked further.
+7. **Very bright isolated pixels.** A few pixels reach ~24,000 counts in `c0`
+   while neuron peaks are ~8,000. Camera hot pixels are one possible
+   explanation; a small very bright structure or a saturated cell are others.
+   Not checked further.
 8. **Preprint full text** could not be fetched (bioRxiv rate-limits automated
    access), so documented values come from the Zenodo description and the
    GitHub README only.
+9. **Scope of the record.** This Zenodo record contains exactly one recording
+   (one movie plus its GT and prediction CSVs). The ASCENT paper also uses the
+   NeRVE freely-moving dataset and an unnamed light-sheet dataset, which are
+   not included here and would have to be obtained from their own sources.
