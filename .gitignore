@@ -1,0 +1,22 @@
+# Downloaded data and generated previews live on scratch; never commit them.
+data
+data/
+previews
+previews/
+*.h5
+*.hdf5
+*.mp4
+*.gif
+*.tif
+*.tiff
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
