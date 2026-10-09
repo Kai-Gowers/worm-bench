@@ -296,7 +296,7 @@ def inspect_annotations(coords: pd.DataFrame, tracks: pd.DataFrame, n_frames: in
     # motion summary: per-step displacement of each track (how much do neurons move?)
     ts = tracks.sort_values(["TrackID", "t"])
     step = ts.groupby("TrackID")[["z", "y", "x"]].diff().dropna()
-    disp = np.sqrt((step[["y", "x"]] ** 2).sum(1))
+    disp = np.sqrt((step[["y", "x"]] ** 2).sum(axis=1))
     out["per_step_motion_voxels"] = dict(
         xy_median=float(disp.median()), xy_p99=float(disp.quantile(0.99)), xy_max=float(disp.max()),
         z_max=int(step.z.abs().max()), frac_steps_zero=float((disp == 0).mean()),
@@ -366,25 +366,38 @@ def inspect_alignment(f: h5py.File, coords: pd.DataFrame, n_frames: int, chan_ke
 # ----------------------------------------------------------------------------
 # optional: stream through every frame once
 # ----------------------------------------------------------------------------
-def per_frame_means(f: h5py.File, n_frames: int, chan_keys: list[str], out_csv: Path, coords: pd.DataFrame | None) -> None:
+def per_frame_means(f: h5py.File, n_frames: int, chan_keys: list[str], out_csv: Path, tracks: pd.DataFrame | None) -> None:
+    """Stream through every frame once.  Writes per-frame volume statistics to
+    out_csv and, if tracks are given, the brightness of every GT track in every
+    channel to <out_csv stem>_tracks.csv (long format: t, TrackID, c0, c1, ...)."""
     banner(f"7. PER-FRAME MEANS over all {n_frames} frames (streaming, one frame at a time)")
-    rows = []
+    rows, track_rows = [], []
     for t in range(n_frames):
         row = {"t": t}
-        pts = coords[coords.t == t] if coords is not None else None
+        pts = tracks[tracks.t == t] if tracks is not None else None
+        per_track = None
         for ck in chan_keys:
             v = f[f"t{t}/{ck}"][()]
             row[f"{ck}_mean"] = float(v.mean())
             row[f"{ck}_p99"] = float(np.percentile(v, 99))
             if pts is not None and len(pts):
-                row[f"{ck}_gt_mean"] = float(local_mean(v, pts.z.to_numpy(), pts.y.to_numpy(), pts.x.to_numpy(), 2).mean())
+                vals = local_mean(v, pts.z.to_numpy(), pts.y.to_numpy(), pts.x.to_numpy(), 2)
+                row[f"{ck}_gt_mean"] = float(vals.mean())
+                if per_track is None:
+                    per_track = pd.DataFrame({"t": t, "TrackID": pts.TrackID.to_numpy()})
+                per_track[ck] = vals
         rows.append(row)
+        if per_track is not None:
+            track_rows.append(per_track)
         if t % 100 == 0:
             print(f"  t={t}: " + ", ".join(f"{k}={v:.1f}" for k, v in row.items() if k != "t"))
-    df = pd.DataFrame(rows)
     out_csv.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(out_csv, index=False)
+    pd.DataFrame(rows).to_csv(out_csv, index=False)
     print(f"wrote {out_csv}")
+    if track_rows:
+        tp = out_csv.with_name(out_csv.stem + "_tracks.csv")
+        pd.concat(track_rows, ignore_index=True).to_csv(tp, index=False)
+        print(f"wrote {tp}")
 
 
 # ----------------------------------------------------------------------------
@@ -413,7 +426,7 @@ def main(argv=None):
         summary["channels"] = inspect_channels(f, tracks, n, chans, args.n_sample_frames, args.n_neurons, args.seed)
         summary["alignment"] = inspect_alignment(f, coords, n, chans, args.seed)
         if args.per_frame_means:
-            per_frame_means(f, n, chans, args.per_frame_means, coords)
+            per_frame_means(f, n, chans, args.per_frame_means, tracks)
 
     if args.out_json:
         args.out_json.parent.mkdir(parents=True, exist_ok=True)
