@@ -150,6 +150,67 @@ python -P scripts/make_previews_ey.py \
 Depth-slice grids, calcium and NeuroPAL max projections, the NeuroPAL stack
 with its neuron names, and a short max-projection movie with ROI points.
 
+## KK dataset (DANDI 000692, one recording)
+
+Findings are written up in [`docs/kk_inspection.md`](docs/kk_inspection.md),
+with a comparison to ASCENT and EY at the end.
+
+### 0. Survey the archive without downloading
+
+```bash
+python -P scripts/survey_dandi_000692.py --out previews/kk/survey.json
+```
+
+Opens each of the 9 NWB assets (~9 GB each) over HTTP and reads only headers
+and small datasets, about 1.5 s per asset. The KK files differ from EY: two
+calcium channels (GCaMP and TagRFP-T), gzip-chunked images, and a
+label-volume segmentation series instead of per-frame point tables, so the
+survey reads everything by explicit path.
+
+### 1. Download
+
+```bash
+bash scripts/download_kk.sh sub-231013-02       # -> data/kk/ (9.4 GB, ~3 min)
+```
+
+### 2. Inspect
+
+```bash
+python -P scripts/inspect_kk.py \
+    --nwb data/kk/sub-231013-02_ses-20231013T111100_ophys.nwb \
+    --out-json previews/kk/inspection_summary.json \
+    --tracks-csv previews/kk/calcium_tracks.csv \
+    --per-frame-means previews/kk/per_frame_means.csv
+```
+
+Same sections as the ASCENT and EY scripts. The annotations are label
+volumes (voxel value i = ROI i), so the script first derives per-frame
+centroids, voxel counts and bounding boxes for every label (streams the
+1,646 label volumes once, ~2 min, cached in `calcium_tracks.csv`). The
+two-channel calcium-vs-reference test from ASCENT applies again; the
+label-volume series also allows a time-index test (which label volume best
+fits image t on the frames with the most motion) that EY could not support.
+The streaming pass over all frames (images and label volumes) takes about
+20 min and writes mask-mean traces for both channels, which are compared
+with the stored traces.
+
+```bash
+python -P scripts/plot_kk_traces.py previews/kk --fps 1.67
+```
+
+### 3. Previews
+
+```bash
+python -P scripts/make_previews_kk.py \
+    --nwb data/kk/sub-231013-02_ses-20231013T111100_ophys.nwb \
+    --tracks previews/kk/calcium_tracks.csv --out previews/kk \
+    --movie-start 1050 --movie-len 200
+```
+
+Depth-slice grids for both channels, GCaMP and TagRFP-T max projections
+with label centroids and mask outlines, the NeuroPAL stack with its neuron
+names, and a 2x2 max-projection movie over a segment where the worm moves.
+
 ## Layout
 
 ```
@@ -167,5 +228,12 @@ scripts/download_ey.sh     SHA-256-verified download of one EY asset
 scripts/inspect_ey.py      NWB inspection (imports helpers from inspect_ascent.py)
 scripts/make_previews_ey.py       PNG / MP4 previews for the EY recording
 scripts/plot_ey_traces.py         population and per-neuron traces vs stored traces
+docs/kk_inspection.md      findings for the KK (DANDI 000692) recording
+docs/author_questions.md   open questions to send to the EY and KK authors
+scripts/survey_dandi_000692.py    remote header-only survey of all 9 KK assets
+scripts/download_kk.sh     SHA-256-verified download of one KK asset
+scripts/inspect_kk.py      structure, label-volume annotations, channels, alignment, time-index test, streaming stats
+scripts/make_previews_kk.py       PNG / MP4 previews for the KK recording
+scripts/plot_kk_traces.py         population and per-neuron traces vs stored traces
 requirements.txt
 ```

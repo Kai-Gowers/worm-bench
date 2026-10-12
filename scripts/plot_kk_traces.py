@@ -53,7 +53,7 @@ axes[0].plot(t_s, pf[f"{g}_bg_mean"], lw=1, color="#27ae60", ls=":", label="GCaM
 axes[0].plot(t_s, pf[f"{r}_bg_mean"], lw=1, color="#c0392b", ls=":", label="TagRFP-T background")
 axes[0].set_title("population brightness over time (8-bit gray counts)", fontsize=10)
 axes[1].plot(t_s, pf[f"{g}_mask_mean"] / pf[f"{r}_mask_mean"], lw=1, color="#8e44ad", label="GCaMP / TagRFP-T mask means")
-axes[1].plot(t_s[: len(st)], st.mean(1) / st.mean(1).median() * (pf[f"{g}_mask_mean"] / pf[f"{r}_mask_mean"]).median(), lw=1, color="#e67e22", alpha=0.8,
+axes[1].plot(t_s[: len(st)], st.mean(axis=1) / st.mean(axis=1).median() * (pf[f"{g}_mask_mean"] / pf[f"{r}_mask_mean"]).median(), lw=1, color="#e67e22", alpha=0.8,
              label="stored SignalRawFluor, mean over neurons (scaled to the same median)")
 axes[1].set_title("GCaMP / RFP ratio of the population vs the stored traces", fontsize=10)
 axes[2].plot(t_s, pf.n_rois, lw=1, color="#2c3e50", label="ROIs present in the label volume")
