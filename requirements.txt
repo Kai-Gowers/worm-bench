@@ -6,3 +6,5 @@ matplotlib
 Pillow
 imageio
 imageio-ffmpeg
+pynwb
+remfile
