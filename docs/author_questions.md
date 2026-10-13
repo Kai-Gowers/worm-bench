@@ -56,3 +56,41 @@ Recording inspected: `sub-231013-02` (asset `2732d548-8c7f-43e0-aec2-fd1d8edc12a
    publication as "unpublished". Is there a reference (or a strain
    description) that states the GCaMP variant, promoters and the NeuroPAL
    background?
+
+## SK1 and SK2 (DANDI 000565 and 000472, Kato lab) — see `sk_inspection.md`
+
+Recordings inspected: `sub-20230322-20-16-50` (000565, asset
+`36715c41-aa5c-4a05-affd-66a9a6089f7f`) and `sub-2022-04-26-w01-NP1` (000472,
+asset `8525ab3c-4a5d-4893-a2c8-4ac7ccbd87bd`).
+
+1. **Stimulus.** `session_description` says "immobilized worm with optogenetic
+   stimulus" and the SK1 `experiment_description` says "optogenetic stimulation
+   of single neurons", but the dandiset description says the calcium data are
+   unstimulated and no stimulus timing is stored. Was any stimulus delivered
+   during these movies, and if so when and to which neuron?
+2. **Annotation provenance.** The per-frame ROI positions move by at most one
+   voxel between frames and never change z. Were the positions detected once
+   (on which frame or on the NeuroPAL stack?) and then propagated, or tracked
+   frame by frame? Were any positions checked by hand?
+3. **Stored DF/F.** The stored `SignalDFoF` traces agree well with the images
+   in SK2 but poorly in SK1 (median per-neuron correlation 0.06 against a
+   5×5 mean at the stored positions). How were the traces computed (ROI
+   shape, background and F0 definition, bleach correction, any smoothing),
+   and from which positions?
+4. **Calcium z spacing.** Matching named neurons between the NeuroPAL stack
+   and calcium frame 0 gives a z scale of 3.8 NeuroPAL slices per calcium
+   slice in SK2, where the stored spacings (0.75 and 1.5 µm) predict 2.0. In
+   SK1 the sign of the z relation is reversed. Is the calcium z step really
+   1.5 µm (SK2) and 2.5 µm (SK1), and are the two stacks acquired in the same
+   z direction?
+5. **Uncertain identities.** SK2 labels end in "?" for 9 of the 32 named
+   neurons (e.g. `AINR?`). Should these be treated as unlabelled or as best
+   guesses, and does the same convention apply to SK1 (where no "?" occurs)?
+6. **Labels in calcium vs NeuroPAL.** In SK1, 18 of the 31 named calcium ROIs
+   have no counterpart among the 44 named NeuroPAL centres, and in SK2 9 of
+   32. Were the calcium IDs assigned independently of the NeuroPAL
+   segmentation stored in the file?
+7. **Camera settings.** Both movies carry a ~95-count camera offset and SK2
+   saturates at 4095 in the first frames. Could you confirm the camera bit
+   depth, exposure time per slice and the volume rate (1.04 Hz SK1,
+   3.3 Hz SK2)?

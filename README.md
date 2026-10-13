@@ -211,6 +211,77 @@ Depth-slice grids for both channels, GCaMP and TagRFP-T max projections
 with label centroids and mask outlines, the NeuroPAL stack with its neuron
 names, and a 2x2 max-projection movie over a segment where the worm moves.
 
+## SK1 and SK2 datasets (DANDI 000565 and 000472, one recording each)
+
+Findings for both are written up in [`docs/sk_inspection.md`](docs/sk_inspection.md),
+with a comparison to ASCENT, EY and KK at the end. Both dandisets come from
+the same lab (Kato, UCSF) and share one NWB layout, so one set of scripts
+serves both.
+
+### 0. Survey the archives without downloading
+
+```bash
+python -P scripts/survey_dandi_sk.py --dandiset 000565 --out previews/sk1/survey.json
+python -P scripts/survey_dandi_sk.py --dandiset 000472 --out previews/sk2/survey.json
+```
+
+Opens each NWB asset over HTTP and reads only headers and small datasets.
+Most assets hold only a NeuroPAL stack; the survey flags the 4 (SK1) and
+2 (SK2) that also hold a calcium movie. About 1 s per NeuroPAL-only asset
+and 7-16 s per calcium asset.
+
+### 1. Download
+
+```bash
+bash scripts/download_sk.sh 000565 sub-20230322-20-16-50     # -> data/sk1/ (4.3 GB)
+bash scripts/download_sk.sh 000472 sub-2022-04-26-w01-NP1    # -> data/sk2/ (8.4 GB)
+```
+
+Resumable `curl` download with the published SHA-256 checked afterwards
+(about 1 and 2 minutes).
+
+### 2. Inspect
+
+```bash
+python -P scripts/inspect_sk.py \
+    --nwb data/sk1/sub-20230322-20-16-50_ses-20230322T201650_ophys.nwb \
+    --out-json previews/sk1/inspection_summary.json \
+    --tracks-csv previews/sk1/calcium_tracks.csv \
+    --per-frame-means previews/sk1/per_frame_means.csv
+python -P scripts/inspect_sk.py \
+    --nwb data/sk2/sub-2022-04-26-w01-NP1_ses-20220426_ophys.nwb \
+    --out-json previews/sk2/inspection_summary.json \
+    --tracks-csv previews/sk2/calcium_tracks.csv \
+    --per-frame-means previews/sk2/per_frame_means.csv
+```
+
+Reuses the EY sections (the files share the EY layout) and adds: the stored
+DF/F series, whether `NeuronIDs/ImageSegmentation` duplicates the per-frame
+segmentation, the NeuroPAL channel-to-colour mapping, a point-based
+time-index test, and a drift test that asks whether the ROI points still sit
+on bright spots late in the movie. The streaming pass takes about 3.5 min
+(SK1, 1500 frames) and 7 min (SK2, 3000 frames).
+
+```bash
+python -P scripts/plot_sk_traces.py previews/sk1 --fps 1.04 --title "SK1 sub-20230322-20-16-50"
+python -P scripts/plot_sk_traces.py previews/sk2 --fps 3.3  --title "SK2 sub-2022-04-26-w01-NP1"
+```
+
+### 3. Previews
+
+```bash
+python -P scripts/make_previews_sk.py \
+    --nwb data/sk1/sub-20230322-20-16-50_ses-20230322T201650_ophys.nwb \
+    --out previews/sk1 --name "SK1 sub-20230322-20-16-50"
+python -P scripts/make_previews_sk.py \
+    --nwb data/sk2/sub-2022-04-26-w01-NP1_ses-20220426_ophys.nwb \
+    --out previews/sk2 --name "SK2 sub-2022-04-26-w01-NP1" \
+    --slice-frames 0 1500 --lim-frame 1500
+```
+
+Depth-slice grids, calcium and NeuroPAL max projections, the NeuroPAL stack
+with its neuron names, and a 200-frame max-projection movie with ROI points.
+
 ## Layout
 
 ```
@@ -235,5 +306,11 @@ scripts/download_kk.sh     SHA-256-verified download of one KK asset
 scripts/inspect_kk.py      structure, label-volume annotations, channels, alignment, time-index test, streaming stats
 scripts/make_previews_kk.py       PNG / MP4 previews for the KK recording
 scripts/plot_kk_traces.py         population and per-neuron traces vs stored traces
+docs/sk_inspection.md      findings for the SK1 (DANDI 000565) and SK2 (DANDI 000472) recordings
+scripts/survey_dandi_sk.py        remote header-only survey of all 21 SK1 and 10 SK2 assets
+scripts/download_sk.sh     SHA-256-verified download of one SK1 or SK2 asset
+scripts/inspect_sk.py      NWB inspection (imports the EY sections, adds DF/F, time-index and drift tests)
+scripts/make_previews_sk.py       PNG / MP4 previews for the SK recordings
+scripts/plot_sk_traces.py         population and per-neuron traces vs stored DF/F
 requirements.txt
 ```
